@@ -1,0 +1,100 @@
+---
+title: "RR_Project 1"
+author: "Sheetal"
+date: "May 12, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# loading required libararies
+library(plyr)
+library(dplyr)
+library(lattice)
+```
+
+
+```{r}
+unzip("activity.zip")
+
+# Question 1: Reading and processing data
+data <- read.csv("activity.csv",stringsAsFactors=FALSE,na.strings="NA")
+
+str(data)
+
+head(data)
+
+# converting date variable into Date format
+data$date <- as.Date(data$date,format="%Y-%m-%d")
+
+# For the first few questions we will be excluding NAs and hence filtering data
+newdata <- filter(data,complete.cases(data))
+
+# Question 2 plotting a histogram of average number of steps taken in a day
+newdatasum <- ddply(newdata,.(date),summarize,sum=sum(steps))
+
+hist(newdatasum$sum,breaks=20,xlab="Number of steps taken by day",col="green",main="Histogram of number of steps taken by day")
+
+# Question 3 mean and median of number of steps taken each day
+# mean
+round(mean(newdatasum$sum))
+
+#median
+round(median (newdatasum$sum))
+
+summary(newdatasum$sum)
+
+#Question 4 time series plot of number of steps taken every 5 minutes
+
+newdata <- newdata %>% group_by(interval) %>% arrange(interval) %>% mutate(mean=mean(steps))
+
+newdata$mean <- as.integer(round(newdata$mean))
+
+plot(newdata$interval,newdata$mean,type="l",col="blue",xlab="Interval",ylab="Average number of steps",main="Time series plot of average number of steps taken by 5 min interval")
+
+# Question 5, time series interval that on average contains the maximum number of steps
+
+x <- newdata[newdata$mean==max(newdata$mean),3]
+unique(x)
+
+# Question 6: Code to describe strategy for imputing
+# For this question we will replace missing values i.e. NAs by a mean of steps for that 5-minute interval
+
+data1 <- data %>% group_by(interval) %>% arrange(interval) %>% mutate(mean=mean(steps,na.rm=TRUE))
+
+data1$mean <- as.integer(round(data1$mean))
+
+data1$steps <- ifelse(is.na(data1$steps),data1$mean,data1$steps)
+
+
+
+#Question 7: Histogram of imputed data
+
+imputedata <- ddply(data1,.(date),summarize,sum=sum(steps))
+
+hist(imputedata$sum,breaks=20,xlab="Number of steps taken by day",col="green",main="No of steps taken by day after replacing missing value with 5-minute mean")
+
+# mean of imputed data
+round(mean(imputedata$sum))
+
+# median of imputed data
+
+round(median(imputedata$sum))
+
+#summary of imputed data
+summary(imputedata$sum)
+
+#Question 8: Panel plot comparing average number of steps taken for 5 minute interval across weekdays and weekends
+
+data1$day <- "weekday"
+
+weekend <- weekdays(imputedata$date) %in% c("Saturday","Sunday")
+
+data1$day[weekend == TRUE] <- "weekend"
+
+xyplot(data1$mean ~ data1$interval | data1$day,type="l",layout=c(1,2))
+
+
+```
+
